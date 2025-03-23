@@ -33,25 +33,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const navigate = useNavigate();
 
-  // Check if Supabase environment variables are missing
-  const isMissingSupabaseConfig = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY;
-  
   useEffect(() => {
     localStorage.setItem('isFirstTimeUser', JSON.stringify(isFirstTimeUser));
   }, [isFirstTimeUser]);
 
   useEffect(() => {
-    // If Supabase is not configured, skip authentication and set isLoading to false
-    if (isMissingSupabaseConfig) {
-      console.warn('AuthProvider - Skipping authentication due to missing Supabase configuration');
-      setIsLoading(false);
-      return;
-    }
+    console.log('AuthProvider - Setting up auth');
+    
+    // First set up the auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('AuthProvider - Auth state changed:', event, session?.user?.id);
+      setSession(session);
+      setUser(session?.user || null);
+      
+      // If the user signed in, redirect to home
+      if (event === 'SIGNED_IN' && session) {
+        toast("Signed in successfully!");
+        navigate('/');
+      }
+      
+      // If the user signed out, redirect to auth
+      if (event === 'SIGNED_OUT') {
+        toast("Signed out");
+        navigate('/auth');
+      }
+    });
 
+    // Then get the initial session
     const getSession = async () => {
       setIsLoading(true);
-      console.log('AuthProvider - Getting session');
-      
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         
@@ -61,12 +71,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           throw error;
         }
         
-        console.log('AuthProvider - Session received:', session);
+        console.log('AuthProvider - Initial session received:', session);
         setSession(session);
         setUser(session?.user || null);
       } catch (error: any) {
         console.error('Error getting session:', error);
-        toast.error('Authentication error: ' + (error.message || 'Unknown error'));
       } finally {
         setIsLoading(false);
       }
@@ -74,29 +83,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     getSession();
 
-    // Only set up auth state change listener if Supabase is configured
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('AuthProvider - Auth state changed:', _event, session?.user?.id);
-      setSession(session);
-      setUser(session?.user || null);
-      
-      // If the user signed in, redirect to home
-      if (_event === 'SIGNED_IN' && session) {
-        toast.success('Signed in successfully!');
-        navigate('/');
-      }
-      
-      // If the user signed out, redirect to auth
-      if (_event === 'SIGNED_OUT') {
-        toast.info('Signed out');
-        navigate('/auth');
-      }
-    });
-
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate, isMissingSupabaseConfig]);
+  }, [navigate]);
 
   console.log('AuthProvider - Rendering with user:', user?.id);
   

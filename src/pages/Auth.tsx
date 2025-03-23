@@ -1,15 +1,17 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dumbbell } from 'lucide-react';
+import { Dumbbell, Mail, Lock } from 'lucide-react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { supabase } from '@/lib/supabase';
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAuth } from '@/providers/AuthProvider';
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -18,8 +20,17 @@ const formSchema = z.object({
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Redirect if already logged in
+  React.useEffect(() => {
+    if (user) {
+      navigate('/');
+    }
+  }, [user, navigate]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -30,6 +41,9 @@ const Auth = () => {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsLoading(true);
+    setErrorMessage(null);
+    
     try {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({
@@ -39,11 +53,9 @@ const Auth = () => {
         
         if (error) throw error;
         
-        toast({
-          title: "Login successful",
+        toast("Login successful", {
           description: "Welcome back to Elevate!",
         });
-        navigate('/');
       } else {
         const { error } = await supabase.auth.signUp({
           email: values.email,
@@ -55,17 +67,18 @@ const Auth = () => {
         
         if (error) throw error;
         
-        toast({
-          title: "Sign up successful",
+        toast("Sign up successful", {
           description: "Please check your email to verify your account.",
         });
       }
     } catch (error: any) {
-      toast({
-        title: isLogin ? "Login failed" : "Sign up failed",
+      console.error('Auth error:', error);
+      setErrorMessage(error.message || "An error occurred. Please try again.");
+      toast(isLogin ? "Login failed" : "Sign up failed", {
         description: error.message || "An error occurred. Please try again.",
-        variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -83,6 +96,12 @@ const Auth = () => {
           {isLogin ? "Welcome back" : "Create an account"}
         </h2>
         
+        {errorMessage && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        )}
+        
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
@@ -92,7 +111,15 @@ const Auth = () => {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="your.email@example.com" type="email" {...field} />
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                      <Input 
+                        placeholder="your.email@example.com" 
+                        type="email" 
+                        className="pl-10" 
+                        {...field} 
+                      />
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -106,15 +133,27 @@ const Auth = () => {
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input placeholder="••••••••" type="password" {...field} />
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                      <Input 
+                        placeholder="••••••••" 
+                        type="password" 
+                        className="pl-10" 
+                        {...field} 
+                      />
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             
-            <Button type="submit" className="w-full">
-              {isLogin ? "Sign In" : "Sign Up"}
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isLoading}
+            >
+              {isLoading ? "Processing..." : (isLogin ? "Sign In" : "Sign Up")}
             </Button>
           </form>
         </Form>
@@ -123,6 +162,7 @@ const Auth = () => {
           <button 
             onClick={() => setIsLogin(!isLogin)} 
             className="text-primary hover:underline text-sm"
+            disabled={isLoading}
           >
             {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
           </button>
