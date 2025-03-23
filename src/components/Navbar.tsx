@@ -2,9 +2,11 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Dumbbell, BarChart2, History, Settings } from 'lucide-react';
+import { useAuth } from '@/providers/AuthProvider';
 
 const Navbar = () => {
   const location = useLocation();
+  const { user } = useAuth();
   
   const isActive = (path: string) => {
     return location.pathname === path;

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Routine } from '@/types';
 import { exercises } from '@/data/exercises';
 import { Play } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface WorkoutCardProps {
   routine: Routine;
@@ -11,9 +12,18 @@ interface WorkoutCardProps {
 
 const WorkoutCard: React.FC<WorkoutCardProps> = ({ routine }) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   const handleStartRoutine = () => {
-    navigate(`/start-workout/${routine.id}`);
+    // Route to active workout with the routine data
+    navigate('/active-workout', { 
+      state: { routineId: routine.id, routineName: routine.name } 
+    });
+    
+    toast({
+      title: "Starting workout",
+      description: `Starting ${routine.name} routine`,
+    });
   };
 
   return (

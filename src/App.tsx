@@ -8,7 +8,11 @@ import Index from "./pages/Index";
 import Routines from "./pages/Routines";
 import Progress from "./pages/Progress";
 import ActiveWorkout from "./pages/ActiveWorkout";
+import Settings from "./pages/Settings";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import { AuthProvider } from "./providers/AuthProvider";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -18,13 +22,42 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/routines" element={<Routines />} />
-          <Route path="/progress" element={<Progress />} />
-          <Route path="/active-workout" element={<ActiveWorkout />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Index />
+              </ProtectedRoute>
+            } />
+            <Route path="/routines" element={
+              <ProtectedRoute>
+                <Routines />
+              </ProtectedRoute>
+            } />
+            <Route path="/routines/create" element={
+              <ProtectedRoute>
+                <NotFound />
+              </ProtectedRoute>
+            } />
+            <Route path="/progress" element={
+              <ProtectedRoute>
+                <Progress />
+              </ProtectedRoute>
+            } />
+            <Route path="/active-workout" element={
+              <ProtectedRoute>
+                <ActiveWorkout />
+              </ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            } />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
