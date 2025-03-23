@@ -12,10 +12,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, isLoading } = useAuth();
   const location = useLocation();
   
+  // Check if Supabase environment variables are missing
+  const isMissingSupabaseConfig = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY;
+  
   // Add more detailed console logs to debug
   console.log('ProtectedRoute - Current path:', location.pathname);
   console.log('ProtectedRoute - User:', user);
   console.log('ProtectedRoute - isLoading:', isLoading);
+  console.log('ProtectedRoute - Missing Supabase config:', isMissingSupabaseConfig);
   
   if (isLoading) {
     return (
@@ -26,6 +30,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         </div>
       </div>
     );
+  }
+
+  // If Supabase is not configured, allow access to protected routes without authentication
+  if (isMissingSupabaseConfig) {
+    console.warn('ProtectedRoute - Bypassing authentication due to missing Supabase configuration');
+    return <>{children}</>;
   }
 
   if (!user) {
