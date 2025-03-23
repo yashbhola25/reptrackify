@@ -39,14 +39,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const getSession = async () => {
       setIsLoading(true);
+      console.log('AuthProvider - Getting session');
       
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
+          console.error('AuthProvider - Session error:', error);
           throw error;
         }
         
+        console.log('AuthProvider - Session received:', session);
         setSession(session);
         setUser(session?.user || null);
       } catch (error) {
@@ -59,6 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     getSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('AuthProvider - Auth state changed:', _event, session?.user?.id);
       setSession(session);
       setUser(session?.user || null);
     });
@@ -68,6 +72,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [navigate]);
 
+  console.log('AuthProvider - Rendering with user:', user?.id);
+  
   return (
     <AuthContext.Provider 
       value={{ 
