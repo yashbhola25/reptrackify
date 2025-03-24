@@ -1,14 +1,14 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Session } from '@supabase/supabase-js';
+import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 type AuthContextType = {
   session: Session | null;
   isLoading: boolean;
-  user: any | null;
+  user: User | null;
   isFirstTimeUser: boolean;
   setIsFirstTimeUser: (value: boolean) => void;
 };
@@ -26,7 +26,7 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<any | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isFirstTimeUser, setIsFirstTimeUser] = useState(() => {
     const stored = localStorage.getItem('isFirstTimeUser');
     return stored === null ? true : JSON.parse(stored);
@@ -41,13 +41,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('AuthProvider - Setting up auth');
     
     // First set up the auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('AuthProvider - Auth state changed:', event, session?.user?.id);
-      setSession(session);
-      setUser(session?.user || null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      console.log('AuthProvider - Auth state changed:', event, newSession?.user?.id);
+      setSession(newSession);
+      setUser(newSession?.user || null);
       
       // If the user signed in, redirect to home
-      if (event === 'SIGNED_IN' && session) {
+      if (event === 'SIGNED_IN' && newSession) {
         toast("Signed in successfully!");
         navigate('/');
       }

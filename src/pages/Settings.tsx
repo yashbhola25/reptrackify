@@ -4,27 +4,21 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut, User, Bell, Shield, HelpCircle } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/providers/AuthProvider';
 
 const Settings = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleSignOut = async () => {
     try {
       await supabase.auth.signOut();
-      toast({
-        title: "Signed out successfully",
-        description: "You have been signed out of your account.",
-      });
-      navigate('/auth');
-    } catch (error) {
-      toast({
-        title: "Error signing out",
-        description: "An error occurred while signing out.",
-        variant: "destructive",
-      });
+      toast("Signed out successfully");
+    } catch (error: any) {
+      toast("Error signing out: " + error.message);
+      console.error("Sign out error:", error);
     }
   };
 
@@ -60,6 +54,11 @@ const Settings = () => {
       <header className="py-6 px-6 mb-2">
         <h1 className="text-3xl font-bold text-foreground">Settings</h1>
         <p className="text-muted-foreground">Manage your account and preferences</p>
+        {user && (
+          <p className="mt-2 text-sm text-muted-foreground">
+            Logged in as: {user.email}
+          </p>
+        )}
       </header>
       
       <div className="px-6 space-y-4">

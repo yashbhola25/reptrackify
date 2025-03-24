@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dumbbell, Mail, Lock } from 'lucide-react';
+import { Dumbbell, Mail, Lock, User } from 'lucide-react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -13,9 +13,13 @@ import { supabase } from '@/lib/supabase';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from '@/providers/AuthProvider';
 
-const formSchema = z.object({
+const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+});
+
+const signupSchema = loginSchema.extend({
+  fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }),
 });
 
 const Auth = () => {
@@ -32,49 +36,74 @@ const Auth = () => {
     }
   }, [user, navigate]);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const loginForm = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "",
       password: "",
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const signupForm = useForm<z.infer<typeof signupSchema>>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+      fullName: ""
+    },
+  });
+
+  const handleLogin = async (values: z.infer<typeof loginSchema>) => {
     setIsLoading(true);
     setErrorMessage(null);
     
     try {
-      if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: values.email,
-          password: values.password,
-        });
-        
-        if (error) throw error;
-        
-        toast("Login successful", {
-          description: "Welcome back to Elevate!",
-        });
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email: values.email,
-          password: values.password,
-          options: {
-            emailRedirectTo: window.location.origin,
-          }
-        });
-        
-        if (error) throw error;
-        
-        toast("Sign up successful", {
-          description: "Please check your email to verify your account.",
-        });
-      }
+      const { error } = await supabase.auth.signInWithPassword({
+        email: values.email,
+        password: values.password,
+      });
+      
+      if (error) throw error;
+      
+      toast("Login successful", {
+        description: "Welcome back to Elevate!",
+      });
     } catch (error: any) {
       console.error('Auth error:', error);
       setErrorMessage(error.message || "An error occurred. Please try again.");
-      toast(isLogin ? "Login failed" : "Sign up failed", {
+      toast("Login failed", {
+        description: error.message || "An error occurred. Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignup = async (values: z.infer<typeof signupSchema>) => {
+    setIsLoading(true);
+    setErrorMessage(null);
+    
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          data: {
+            full_name: values.fullName
+          },
+          emailRedirectTo: window.location.origin,
+        }
+      });
+      
+      if (error) throw error;
+      
+      toast("Sign up successful", {
+        description: "Please check your email to verify your account.",
+      });
+    } catch (error: any) {
+      console.error('Auth error:', error);
+      setErrorMessage(error.message || "An error occurred. Please try again.");
+      toast("Sign up failed", {
         description: error.message || "An error occurred. Please try again.",
       });
     } finally {
@@ -102,61 +131,140 @@ const Auth = () => {
           </Alert>
         )}
         
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                      <Input 
-                        placeholder="your.email@example.com" 
-                        type="email" 
-                        className="pl-10" 
-                        {...field} 
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        {isLogin ? (
+          <Form {...loginForm}>
+            <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-6">
+              <FormField
+                control={loginForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                        <Input 
+                          placeholder="your.email@example.com" 
+                          type="email" 
+                          className="pl-10" 
+                          {...field} 
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={loginForm.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                        <Input 
+                          placeholder="••••••••" 
+                          type="password" 
+                          className="pl-10" 
+                          {...field} 
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isLoading}
+              >
+                {isLoading ? "Signing in..." : "Sign In"}
+              </Button>
+            </form>
+          </Form>
+        ) : (
+          <Form {...signupForm}>
+            <form onSubmit={signupForm.handleSubmit(handleSignup)} className="space-y-6">
+              <FormField
+                control={signupForm.control}
+                name="fullName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <User className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                        <Input 
+                          placeholder="John Doe" 
+                          className="pl-10" 
+                          {...field} 
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                      <Input 
-                        placeholder="••••••••" 
-                        type="password" 
-                        className="pl-10" 
-                        {...field} 
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={isLoading}
-            >
-              {isLoading ? "Processing..." : (isLogin ? "Sign In" : "Sign Up")}
-            </Button>
-          </form>
-        </Form>
+              <FormField
+                control={signupForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                        <Input 
+                          placeholder="your.email@example.com" 
+                          type="email" 
+                          className="pl-10" 
+                          {...field} 
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={signupForm.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                        <Input 
+                          placeholder="••••••••" 
+                          type="password" 
+                          className="pl-10" 
+                          {...field} 
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isLoading}
+              >
+                {isLoading ? "Creating account..." : "Create Account"}
+              </Button>
+            </form>
+          </Form>
+        )}
         
         <div className="mt-4 text-center">
           <button 
